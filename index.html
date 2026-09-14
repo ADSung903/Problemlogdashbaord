@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIT/SVT Problem List Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--card:#22263a;--border:#2e3347;
+  --accent:#4f8ef7;--accent2:#34d399;--warn:#f59e0b;--danger:#ef4444;
+  --text:#e8eaf6;--muted:#8b90a8;--sub:#4a4f6a;
+  --bl:#ef4444;--cr:#f59e0b;--mj:#4f8ef7;
+  --fw:#4f8ef7;--ee:#34d399;--me:#a78bfa;--lcm:#fb923c;--pw:#f43f5e;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
+
+/* ── HEADER ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:16px;font-weight:600;color:var(--text);letter-spacing:.5px}
+.logo span{color:var(--accent)}
+.header-right{display:flex;gap:10px;align-items:center}
+.phase-badge{font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;border:1px solid}
+.pb-sit{color:#f59e0b;border-color:#f59e0b;background:rgba(245,158,11,.1)}
+.pb-svt{color:#34d399;border-color:#34d399;background:rgba(52,211,153,.1)}
+.pb-none{color:var(--muted);border-color:var(--sub)}
+.last-update{font-size:11px;color:var(--muted)}
+
+/* ── IMPORT ZONE ── */
+.import-zone{margin:24px;border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface)}
+.import-zone:hover,.import-zone.drag{border-color:var(--accent);background:rgba(79,142,247,.05)}
+.import-zone.has-data{border-style:solid;border-color:var(--accent2);background:rgba(52,211,153,.04)}
+.import-icon{font-size:36px;margin-bottom:12px;opacity:.5}
+.import-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+.import-sub{font-size:12px;color:var(--muted)}
+.import-slots{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px}
+.slot{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:all .2s;text-align:center}
+.slot:hover{border-color:var(--accent);background:rgba(79,142,247,.06)}
+.slot.loaded{border-color:var(--accent2);background:rgba(52,211,153,.06)}
+.slot-phase{font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:6px}
+.slot-sit{color:var(--warn)}
+.slot-svt{color:var(--accent2)}
+.slot-name{font-size:12px;color:var(--muted);margin-top:4px}
+.slot-count{font-size:20px;font-weight:700;color:var(--text);margin-top:2px}
+input[type=file]{display:none}
+
+/* ── LAYOUT ── */
+.main{padding:0 24px 24px}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.toolbar-label{font-size:12px;color:var(--muted);white-space:nowrap}
+select,button{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;transition:all .2s}
+select:hover,button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:7px 16px}
+button.primary:hover{opacity:.88}
+button.export-btn{background:rgba(52,211,153,.12);border-color:var(--accent2);color:var(--accent2);font-weight:600}
+button.export-btn:hover{background:rgba(52,211,153,.2)}
+.divider{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.clear-btn{color:var(--danger);border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.07)}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;border-radius:3px 0 0 3px}
+.kpi.total::before{background:var(--accent)}
+.kpi.bl::before{background:var(--danger)}
+.kpi.cr::before{background:var(--warn)}
+.kpi.mj::before{background:var(--mj)}
+.kpi.conv::before{background:var(--accent2)}
+.kpi-label{font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.kpi-val{font-size:28px;font-weight:700;line-height:1;margin-bottom:4px}
+.kpi.total .kpi-val{color:var(--accent)}
+.kpi.bl .kpi-val{color:var(--danger)}
+.kpi.cr .kpi-val{color:var(--warn)}
+.kpi.mj .kpi-val{color:var(--mj)}
+.kpi.conv .kpi-val{color:var(--accent2)}
+.kpi-sub{font-size:11px;color:var(--muted)}
+.kpi-delta{font-size:11px;margin-top:4px}
+.delta-up{color:var(--danger)}
+.delta-dn{color:var(--accent2)}
+
+/* ── GRID ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.panel-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px}
+canvas{max-height:220px}
+
+/* ── CLUSTER TABLE ── */
+.cluster-table{width:100%;border-collapse:collapse;font-size:12px}
+.cluster-table th{text-align:left;color:var(--muted);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.cluster-table td{padding:7px 8px;border-bottom:1px solid rgba(46,51,71,.6);vertical-align:middle}
+.cluster-table tr:last-child td{border-bottom:none}
+.cluster-table tr:hover td{background:rgba(79,142,247,.04)}
+.sev-pill{display:inline-block;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600}
+.p-bl{background:rgba(239,68,68,.15);color:#ef4444}
+.p-cr{background:rgba(245,158,11,.15);color:#f59e0b}
+.p-mj{background:rgba(79,142,247,.15);color:#4f8ef7}
+.bar-cell{display:flex;align-items:center;gap:6px}
+.mini-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.mini-fill{height:100%;border-radius:3px;background:var(--accent)}
+.mini-pct{font-size:11px;color:var(--muted);min-width:32px}
+.owner-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;flex-shrink:0}
+.conv-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:2px}
+.conv-seg-c{background:var(--accent2)}
+.conv-seg-a{background:var(--warn)}
+.conv-seg-n{background:var(--danger)}
+
+/* ── ISSUE TABLE ── */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);background:var(--card)}
+.issue-table{width:100%;border-collapse:collapse;font-size:12px}
+.issue-table th{background:var(--surface);padding:9px 12px;text-align:left;font-weight:600;color:var(--muted);white-space:nowrap;border-bottom:1px solid var(--border);position:sticky;top:0}
+.issue-table td{padding:8px 12px;border-bottom:1px solid rgba(46,51,71,.5);vertical-align:top;max-width:280px;word-break:break-word}
+.issue-table tr:last-child td{border-bottom:none}
+.issue-table tr:hover td{background:rgba(79,142,247,.04)}
+.issue-table .code{font-family:monospace;color:var(--accent);font-size:11px;white-space:nowrap}
+.issue-table .subj{color:var(--text);line-height:1.5}
+.issue-table .mod{color:var(--muted);font-size:11px}
+.domain-tag{display:inline-block;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700}
+.d-SW{background:rgba(79,142,247,.15);color:#4f8ef7}
+.d-EE{background:rgba(52,211,153,.15);color:#34d399}
+.d-ME{background:rgba(167,139,250,.15);color:#a78bfa}
+.d-LCM{background:rgba(251,146,60,.15);color:#fb923c}
+.d-Power{background:rgba(244,63,94,.15);color:#f43f5e}
+.status-tag{font-size:10px;border-radius:4px;padding:1px 6px;font-weight:600;display:inline-block}
+.s-new{background:rgba(239,68,68,.15);color:#ef4444}
+.s-ana{background:rgba(245,158,11,.12);color:#f59e0b}
+.s-con{background:rgba(52,211,153,.15);color:#34d399}
+.s-cls{background:rgba(139,144,168,.12);color:#8b90a8}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)}
+.page-btns{display:flex;gap:6px}
+.page-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}
+.page-btn:hover{border-color:var(--accent)}
+.page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── EMPTY / LOADING ── */
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.loading{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:16px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .kpi-row{grid-template-columns:repeat(3,1fr)}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .import-slots{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Legion <span>32UL-20</span> · Problem List Dashboard</div>
+  <div class="header-right">
+    <span class="phase-badge pb-sit" id="sit-badge">SIT: 未載入</span>
+    <span class="phase-badge pb-svt" id="svt-badge">SVT: 未載入</span>
+    <span class="last-update" id="last-update"></span>
+  </div>
+</div>
+
+<!-- Import slots -->
+<div class="import-slots">
+  <div class="slot" id="sit-slot" onclick="document.getElementById('sit-file').click()">
+    <input type="file" id="sit-file" accept=".xls,.xlsx" onchange="loadFile(event,'SIT')">
+    <div class="slot-phase slot-sit">SIT</div>
+    <div class="slot-name" id="sit-name">點擊匯入 SIT Problem List</div>
+    <div class="slot-count" id="sit-count">—</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px" id="sit-date"></div>
+  </div>
+  <div class="slot" id="svt-slot" onclick="document.getElementById('svt-file').click()">
+    <input type="file" id="svt-file" accept=".xls,.xlsx" onchange="loadFile(event,'SVT')">
+    <div class="slot-phase slot-svt">SVT</div>
+    <div class="slot-name" id="svt-name">點擊匯入 SVT Problem List</div>
+    <div class="slot-count" id="svt-count">—</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px" id="svt-date"></div>
+  </div>
+</div>
+
+<!-- Main dashboard (hidden until data loaded) -->
+<div class="main" id="main" style="display:none">
+
+  <!-- Toolbar / Filters -->
+  <div class="toolbar">
+    <span class="toolbar-label">過濾：</span>
+    <select id="f-phase" onchange="applyFilters()">
+      <option value="">Phase（全部）</option>
+      <option value="SIT">SIT</option>
+      <option value="SVT">SVT</option>
+    </select>
+    <select id="f-sev" onchange="applyFilters()">
+      <option value="">Severity（全部）</option>
+      <option value="Blocker">Blocker</option>
+      <option value="Critical">Critical</option>
+      <option value="Major">Major</option>
+    </select>
+    <select id="f-domain" onchange="applyFilters()">
+      <option value="">Domain（全部）</option>
+      <option value="SW">SW</option>
+      <option value="EE">EE</option>
+      <option value="ME">ME</option>
+      <option value="TPV LCM">LCM</option>
+      <option value="Power">Power</option>
+    </select>
+    <select id="f-cluster" onchange="applyFilters()">
+      <option value="">Cluster（全部）</option>
+    </select>
+    <select id="f-owner" onchange="applyFilters()">
+      <option value="">Owner（全部）</option>
+    </select>
+    <select id="f-status" onchange="applyFilters()">
+      <option value="">狀態（全部）</option>
+      <option value="New">New</option>
+      <option value="Analyzing">Analyzing</option>
+      <option value="Confirm">Confirm</option>
+    </select>
+    <div class="divider"></div>
+    <button class="clear-btn" onclick="clearFilters()">清除過濾</button>
+    <button class="export-btn" onclick="exportExcel()">⬇ 匯出 Excel</button>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-row">
+    <div class="kpi total">
+      <div class="kpi-label">總問題數</div>
+      <div class="kpi-val" id="k-total">0</div>
+      <div class="kpi-sub" id="k-total-sub"></div>
+    </div>
+    <div class="kpi bl">
+      <div class="kpi-label">Blocker</div>
+      <div class="kpi-val" id="k-bl">0</div>
+      <div class="kpi-sub" id="k-bl-sub">阻擋驗測進行</div>
+    </div>
+    <div class="kpi cr">
+      <div class="kpi-label">Critical</div>
+      <div class="kpi-val" id="k-cr">0</div>
+      <div class="kpi-sub" id="k-cr-sub">功能無法驗證</div>
+    </div>
+    <div class="kpi mj">
+      <div class="kpi-label">Major</div>
+      <div class="kpi-val" id="k-mj">0</div>
+      <div class="kpi-sub" id="k-mj-sub"></div>
+    </div>
+    <div class="kpi conv">
+      <div class="kpi-label">收斂率（Confirm）</div>
+      <div class="kpi-val" id="k-conv">0%</div>
+      <div class="kpi-sub" id="k-conv-sub"></div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="grid3" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="panel-title">Severity 分布</div>
+      <canvas id="chart-sev"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Issue Domain 分布</div>
+      <canvas id="chart-domain"></canvas>
+    </div>
+    <div class="panel">
+      <div class="panel-title">問題狀態分布</div>
+      <canvas id="chart-status"></canvas>
+    </div>
+  </div>
+
+  <!-- Cluster analysis + Owner breakdown -->
+  <div class="grid2" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="panel-title">根因群組（Cluster）分析</div>
+      <table class="cluster-table" id="cluster-table">
+        <thead>
+          <tr>
+            <th>群組</th>
+            <th>筆數</th>
+            <th>BL</th>
+            <th>CR</th>
+            <th>收斂</th>
+            <th>Owner</th>
+          </tr>
+        </thead>
+        <tbody id="cluster-tbody"></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-title">責任人負荷</div>
+      <canvas id="chart-owner"></canvas>
+    </div>
+  </div>
+
+  <!-- Phase comparison (shows if both loaded) -->
+  <div class="panel grid2" id="compare-panel" style="display:none;margin-bottom:12px;grid-template-columns:1fr 1fr">
+    <div>
+      <div class="panel-title">SIT vs SVT — Severity 比較</div>
+      <canvas id="chart-compare"></canvas>
+    </div>
+    <div>
+      <div class="panel-title">收斂進度對比</div>
+      <canvas id="chart-conv"></canvas>
+    </div>
+  </div>
+
+  <!-- Issue detail table -->
+  <div class="panel" style="padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">問題明細 <span id="table-count" style="color:var(--text)"></span></div>
+      <div style="display:flex;gap:8px">
+        <input id="search" type="text" placeholder="搜尋 ID / Subject / Module…" oninput="applyFilters()"
+          style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 10px;font-size:12px;width:220px">
+      </div>
+    </div>
+    <div class="table-wrap" style="border:none;border-radius:0">
+      <table class="issue-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Phase</th>
+            <th>Severity</th>
+            <th>Domain</th>
+            <th>Cluster</th>
+            <th>Module</th>
+            <th>Subject</th>
+            <th>狀態</th>
+            <th>Owner</th>
+            <th>Root Cause</th>
+          </tr>
+        </thead>
+        <tbody id="issue-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div id="page-info"></div>
+      <div class="page-btns" id="page-btns"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Empty state -->
+<div id="empty-state">
+  <div class="empty">
+    <div class="empty-icon">📋</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:8px;color:var(--text)">尚未載入問題清單</div>
+    <div style="font-size:13px;color:var(--muted)">請從上方匯入 SIT 或 SVT 的 Problem List（.xls / .xlsx）</div>
+  </div>
+</div>
+
+<script>
+// ─── DATA STORE ───────────────────────────────────────────────
+const store = { SIT: [], SVT: [] };
+const OWNER_MAP = {
+  'A_FW_FFC': { label: 'A FW FFC Spec未導入', owner: 'Jet (FW)', color: '#4f8ef7' },
+  'B_OSD_UI': { label: 'B OSD UI 外觀設計', owner: 'Jet (FW)', color: '#4f8ef7' },
+  'C_OSD_Tree': { label: 'C OSD Tree Spec對齊', owner: 'Jet + PM', color: '#818cf8' },
+  'D_OSD_Func': { label: 'D OSD 功能行為異常', owner: 'Jet (FW)', color: '#4f8ef7' },
+  'E_Lang': { label: 'E 語言翻譯亂碼', owner: 'Jet (FW)', color: '#4f8ef7' },
+  'F_Compat': { label: 'F 現場相容性驗測', owner: 'Ace + Jet', color: '#34d399' },
+  'G_EDID': { label: 'G EE EDID/Timing', owner: 'Ace (EE)', color: '#34d399' },
+  'H_HW': { label: 'H EE 硬體/文件確認', owner: 'Ace (EE)', color: '#34d399' },
+  'I_ME': { label: 'I ME 機構/落下', owner: 'Heper/Haibao', color: '#a78bfa' },
+  'J_LCM': { label: 'J LCM 面板PQ/Thermal', owner: 'Miller/Yating', color: '#fb923c' },
+  'K_Power': { label: 'K Power 電源板', owner: 'Iven/QingFeng', color: '#f43f5e' },
+  'L_SW_Misc': { label: 'L SW 量產雜項', owner: 'Jet + Joey', color: '#818cf8' },
+  'Z_Other': { label: 'Z 其他', owner: 'PM追蹤', color: '#8b90a8' },
+};
+
+let filtered = [];
+let currentPage = 1;
+const PAGE_SIZE = 50;
+let charts = {};
+
+// ─── CLUSTER CLASSIFIER ───────────────────────────────────────
+function classifyCluster(row) {
+  const mod = String(row['Module'] || '');
+  const domain = String(row['Issue Domain'] || '');
+  const tc = String(row['Test Category'] || '');
+  if (tc === 'FFC' || mod === 'Function:FFC') return 'A_FW_FFC';
+  if (mod === 'UI') return 'B_OSD_UI';
+  if (mod === 'Spec:OSD Tree Spec') return 'C_OSD_Tree';
+  if (['Function:OSD Setting','Function:Gaming Setting','Function:Image Setting',
+       'Function:Color Setting','Function:Hot Key','Function:Reset','Function:OLED Care',
+       'Function:PxP','Function:CEC','Function:Input detect'].includes(mod)) return 'D_OSD_Func';
+  if (mod === 'Spec:Language Translation') return 'E_Lang';
+  if (mod === 'On site' || mod === 'Sample') return 'F_Compat';
+  if (['Video:Timing','Production: EDID/HDCP'].includes(mod) && domain === 'EE') return 'G_EDID';
+  if (domain === 'EE') return 'H_HW';
+  if (domain === 'ME') return 'I_ME';
+  if (domain === 'TPV LCM') return 'J_LCM';
+  if (domain === 'Power') return 'K_Power';
+  if (['Production: Others','Production:MFG','Production: Factory mode',
+       'Production: IO Port','Production:Safety'].includes(mod) && domain === 'SW') return 'L_SW_Misc';
+  return 'Z_Other';
+}
+
+function getStatus(val) {
+  const s = String(val || '');
+  if (s.startsWith('New')) return 'New';
+  if (s.startsWith('Analyzing')) return 'Analyzing';
+  if (s.startsWith('Confirm')) return 'Confirm';
+  if (s.startsWith('Close') || s.startsWith('Waive')) return 'Closed';
+  return s;
+}
+
+// ─── FILE LOADING ─────────────────────────────────────────────
+function loadFile(event, phase) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const data = rows.map(r => ({
+        ...r,
+        _phase: phase,
+        _cluster: classifyCluster(r),
+        _status: getStatus(r['狀態']),
+        _owner: OWNER_MAP[classifyCluster(r)]?.owner || 'PM',
+      }));
+      store[phase] = data;
+      updateSlot(phase, file.name, data.length);
+      rebuildAll();
+    } catch(err) {
+      alert('讀取失敗：' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+function updateSlot(phase, name, count) {
+  const p = phase.toLowerCase();
+  document.getElementById(p+'-slot').classList.add('loaded');
+  document.getElementById(p+'-name').textContent = name;
+  document.getElementById(p+'-count').textContent = count + ' 筆';
+  document.getElementById(p+'-date').textContent = new Date().toLocaleString('zh-TW');
+  document.getElementById(p+'-badge').textContent = phase + ': ' + count + ' 筆';
+  document.getElementById('last-update').textContent = '更新：' + new Date().toLocaleTimeString('zh-TW');
+}
+
+// ─── REBUILD ALL ──────────────────────────────────────────────
+function rebuildAll() {
+  const all = [...store.SIT, ...store.SVT];
+  if (!all.length) { document.getElementById('main').style.display='none'; document.getElementById('empty-state').style.display=''; return; }
+  document.getElementById('main').style.display='';
+  document.getElementById('empty-state').style.display='none';
+  populateFilterOptions(all);
+  applyFilters();
+  if (store.SIT.length && store.SVT.length) {
+    document.getElementById('compare-panel').style.display='grid';
+    renderCompareCharts();
+  } else {
+    document.getElementById('compare-panel').style.display='none';
+  }
+}
+
+function populateFilterOptions(all) {
+  const clusters = [...new Set(all.map(r=>r._cluster))].sort();
+  const owners = [...new Set(all.map(r=>r._owner))].sort();
+  const cSel = document.getElementById('f-cluster');
+  cSel.innerHTML = '<option value="">Cluster（全部）</option>';
+  clusters.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=OWNER_MAP[c]?.label||c; cSel.appendChild(o); });
+  const oSel = document.getElementById('f-owner');
+  oSel.innerHTML = '<option value="">Owner（全部）</option>';
+  owners.forEach(o => { const el=document.createElement('option'); el.value=o; el.textContent=o; oSel.appendChild(el); });
+}
+
+// ─── FILTERS ──────────────────────────────────────────────────
+function applyFilters() {
+  const all = [...store.SIT, ...store.SVT];
+  const fPhase = document.getElementById('f-phase').value;
+  const fSev = document.getElementById('f-sev').value;
+  const fDomain = document.getElementById('f-domain').value;
+  const fCluster = document.getElementById('f-cluster').value;
+  const fOwner = document.getElementById('f-owner').value;
+  const fStatus = document.getElementById('f-status').value;
+  const fSearch = document.getElementById('search').value.toLowerCase();
+  filtered = all.filter(r => {
+    if (fPhase && r._phase !== fPhase) return false;
+    if (fSev && r['Severity'] !== fSev) return false;
+    if (fDomain && r['Issue Domain'] !== fDomain) return false;
+    if (fCluster && r._cluster !== fCluster) return false;
+    if (fOwner && r._owner !== fOwner) return false;
+    if (fStatus && r._status !== fStatus) return false;
+    if (fSearch) {
+      const haystack = [r['事務編碼'],r['Subject'],r['Module'],r['Root Cause']].join(' ').toLowerCase();
+      if (!haystack.includes(fSearch)) return false;
+    }
+    return true;
+  });
+  currentPage = 1;
+  renderKPI(filtered);
+  renderCharts(filtered);
+  renderClusterTable(filtered);
+  renderTable(filtered);
+}
+
+function clearFilters() {
+  ['f-phase','f-sev','f-domain','f-cluster','f-owner','f-status'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('search').value='';
+  applyFilters();
+}
+
+// ─── KPI ──────────────────────────────────────────────────────
+function renderKPI(data) {
+  const total = data.length;
+  const bl = data.filter(r=>r['Severity']==='Blocker').length;
+  const cr = data.filter(r=>r['Severity']==='Critical').length;
+  const mj = data.filter(r=>r['Severity']==='Major').length;
+  const conf = data.filter(r=>r._status==='Confirm').length;
+  const pct = total ? Math.round(conf/total*100) : 0;
+  document.getElementById('k-total').textContent = total;
+  document.getElementById('k-total-sub').textContent = `SIT: ${data.filter(r=>r._phase==='SIT').length} / SVT: ${data.filter(r=>r._phase==='SVT').length}`;
+  document.getElementById('k-bl').textContent = bl;
+  document.getElementById('k-bl-sub').textContent = bl ? `⚠ ${bl} 筆阻擋驗測` : '無 Blocker';
+  document.getElementById('k-cr').textContent = cr;
+  document.getElementById('k-cr-sub').textContent = `Major ${mj} 筆`;
+  document.getElementById('k-mj').textContent = mj;
+  document.getElementById('k-mj-sub').textContent = `New: ${data.filter(r=>r._status==='New').length} / Analyzing: ${data.filter(r=>r._status==='Analyzing').length}`;
+  document.getElementById('k-conv').textContent = pct + '%';
+  document.getElementById('k-conv-sub').textContent = `Confirm ${conf} / ${total} 筆`;
+}
+
+// ─── CHARTS ───────────────────────────────────────────────────
+function destroyChart(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+function makeChart(id, type, labels, datasets, opts={}) {
+  destroyChart(id);
+  const ctx = document.getElementById(id).getContext('2d');
+  charts[id] = new Chart(ctx, { type, data:{labels,datasets}, options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:opts.legend!==false, position:'bottom', labels:{color:'#8b90a8',font:{size:11},boxWidth:10,padding:8} }, tooltip:{callbacks:{}} },
+    scales: type==='bar'?{x:{ticks:{color:'#8b90a8',font:{size:11}},grid:{color:'rgba(46,51,71,.5)'},border:{color:'#2e3347'}},y:{ticks:{color:'#8b90a8',font:{size:11}},grid:{color:'rgba(46,51,71,.5)'},border:{color:'#2e3347'}}}:{},
+    ...opts
+  }});
+}
+
+function count(data, field, val) { return data.filter(r=>r[field]===val).length; }
+
+function renderCharts(data) {
+  // Severity pie
+  makeChart('chart-sev','doughnut',
+    ['Blocker','Critical','Major'],
+    [{data:[count(data,'Severity','Blocker'),count(data,'Severity','Critical'),count(data,'Severity','Major')],
+      backgroundColor:['#ef4444','#f59e0b','#4f8ef7'],borderWidth:0,hoverOffset:4}],
+    {legend:true, cutout:'65%'});
+
+  // Domain bar
+  const domains = ['SW','EE','ME','TPV LCM','Power'];
+  const dColors = ['#4f8ef7','#34d399','#a78bfa','#fb923c','#f43f5e'];
+  makeChart('chart-domain','bar',
+    domains,
+    [{label:'問題數',data:domains.map(d=>count(data,'Issue Domain',d)),
+      backgroundColor:dColors,borderRadius:4,borderWidth:0}],
+    {legend:false, plugins:{legend:{display:false}}});
+
+  // Status doughnut
+  const statuses = ['New','Analyzing','Confirm','Closed'];
+  const sColors = ['#ef4444','#f59e0b','#34d399','#8b90a8'];
+  makeChart('chart-status','doughnut',
+    statuses,
+    [{data:statuses.map(s=>data.filter(r=>r._status===s).length),
+      backgroundColor:sColors,borderWidth:0,hoverOffset:4}],
+    {legend:true, cutout:'65%'});
+
+  // Owner bar (horizontal)
+  const ownerMap = {};
+  data.forEach(r=>{ ownerMap[r._owner]=(ownerMap[r._owner]||0)+1; });
+  const ownersSorted = Object.entries(ownerMap).sort((a,b)=>b[1]-a[1]);
+  destroyChart('chart-owner');
+  const ctx = document.getElementById('chart-owner').getContext('2d');
+  charts['chart-owner'] = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:ownersSorted.map(o=>o[0]),
+      datasets:[{label:'筆數',data:ownersSorted.map(o=>o[1]),
+        backgroundColor:ownersSorted.map(o=>{
+          const name=o[0];
+          if(name.includes('Jet')) return '#4f8ef7';
+          if(name.includes('Ace')) return '#34d399';
+          if(name.includes('Heper')) return '#a78bfa';
+          if(name.includes('Miller')) return '#fb923c';
+          if(name.includes('Iven')) return '#f43f5e';
+          return '#8b90a8';
+        }),
+        borderRadius:4,borderWidth:0}]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#8b90a8',font:{size:10}},grid:{color:'rgba(46,51,71,.5)'},border:{color:'#2e3347'}},
+        y:{ticks:{color:'#8b90a8',font:{size:10}},grid:{display:false},border:{color:'#2e3347'}}
+      }
+    }
+  });
+  document.getElementById('chart-owner').style.maxHeight = Math.max(180, ownersSorted.length*34)+'px';
+}
+
+function renderCompareCharts() {
+  const sit = store.SIT, svt = store.SVT;
+  const sevs = ['Blocker','Critical','Major'];
+  makeChart('chart-compare','bar',
+    sevs,
+    [
+      {label:'SIT',data:sevs.map(s=>count(sit,'Severity',s)),backgroundColor:'#f59e0b',borderRadius:4,borderWidth:0},
+      {label:'SVT',data:sevs.map(s=>count(svt,'Severity',s)),backgroundColor:'#34d399',borderRadius:4,borderWidth:0},
+    ],{legend:true});
+
+  const statuses = ['New','Analyzing','Confirm'];
+  const sColors = ['#ef4444','#f59e0b','#34d399'];
+  makeChart('chart-conv','bar',
+    ['SIT','SVT'],
+    statuses.map((s,i)=>({label:s,data:[sit.filter(r=>r._status===s).length,svt.filter(r=>r._status===s).length],
+      backgroundColor:sColors[i],borderRadius:4,borderWidth:0,stack:'s'})),
+    {legend:true});
+}
+
+// ─── CLUSTER TABLE ────────────────────────────────────────────
+function renderClusterTable(data) {
+  const tbody = document.getElementById('cluster-tbody');
+  const clusterData = {};
+  data.forEach(r => {
+    const c = r._cluster;
+    if (!clusterData[c]) clusterData[c] = { total:0,bl:0,cr:0,conf:0,ana:0,new_:0 };
+    clusterData[c].total++;
+    if(r['Severity']==='Blocker') clusterData[c].bl++;
+    if(r['Severity']==='Critical') clusterData[c].cr++;
+    if(r._status==='Confirm') clusterData[c].conf++;
+    if(r._status==='Analyzing') clusterData[c].ana++;
+    if(r._status==='New') clusterData[c].new_++;
+  });
+  const sorted = Object.entries(clusterData).sort((a,b)=>b[1].total-a[1].total);
+  const maxTotal = Math.max(...sorted.map(e=>e[1].total),1);
+  tbody.innerHTML = sorted.map(([ck,v])=>{
+    const info = OWNER_MAP[ck]||{label:ck,owner:'PM',color:'#8b90a8'};
+    const pct = v.total ? Math.round(v.conf/v.total*100) : 0;
+    return `<tr onclick="document.getElementById('f-cluster').value='${ck}';applyFilters()" style="cursor:pointer">
+      <td style="font-size:11px;color:${info.color};font-weight:600;white-space:nowrap">${info.label}</td>
+      <td style="font-weight:600">${v.total}</td>
+      <td>${v.bl?`<span class="sev-pill p-bl">${v.bl}</span>`:'—'}</td>
+      <td>${v.cr?`<span class="sev-pill p-cr">${v.cr}</span>`:'—'}</td>
+      <td>
+        <div class="bar-cell">
+          <div class="mini-bar"><div class="mini-fill" style="width:${pct}%;background:${info.color}"></div></div>
+          <div class="mini-pct">${pct}%</div>
+        </div>
+      </td>
+      <td style="font-size:11px;color:var(--muted)">${info.owner}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── ISSUE TABLE ──────────────────────────────────────────────
+function renderTable(data) {
+  const start = (currentPage-1)*PAGE_SIZE;
+  const page = data.slice(start, start+PAGE_SIZE);
+  const tbody = document.getElementById('issue-tbody');
+  document.getElementById('table-count').textContent = `（${data.length} 筆）`;
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted)">無符合條件的問題</td></tr>`;
+  } else {
+    tbody.innerHTML = page.map(r => {
+      const sev = r['Severity']||'';
+      const sevClass = sev==='Blocker'?'p-bl':sev==='Critical'?'p-cr':'p-mj';
+      const st = r._status;
+      const stClass = st==='New'?'s-new':st==='Analyzing'?'s-ana':st==='Confirm'?'s-con':'s-cls';
+      const domain = String(r['Issue Domain']||'');
+      const dClass = 'D-'+(domain.replace(' ','').replace('TPV',''));
+      const domainKey = domain.replace('TPV ','');
+      return `<tr>
+        <td class="code">${r['事務編碼']||''}</td>
+        <td><span style="font-size:10px;font-weight:700;color:${r._phase==='SIT'?'#f59e0b':'#34d399'}">${r._phase}</span></td>
+        <td><span class="sev-pill ${sevClass}">${sev}</span></td>
+        <td><span class="domain-tag d-${domainKey}">${domain}</span></td>
+        <td style="font-size:10px;color:${OWNER_MAP[r._cluster]?.color||'#8b90a8'};white-space:nowrap">${OWNER_MAP[r._cluster]?.label.split(' ').slice(0,2).join(' ')||r._cluster}</td>
+        <td class="mod">${r['Module']||''}</td>
+        <td class="subj">${String(r['Subject']||'').substring(0,80)}${String(r['Subject']||'').length>80?'…':''}</td>
+        <td><span class="status-tag ${stClass}">${st}</span></td>
+        <td style="font-size:11px;color:var(--muted);white-space:nowrap">${r._owner||''}</td>
+        <td style="font-size:11px;color:var(--muted)">${String(r['Root Cause']||'').substring(0,50)||'—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(data.length / PAGE_SIZE);
+  document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPages} 頁，共 ${data.length} 筆`;
+  const btnContainer = document.getElementById('page-btns');
+  btnContainer.innerHTML = '';
+  const addBtn = (label, page, active=false, disabled=false) => {
+    const btn = document.createElement('button');
+    btn.className = 'page-btn' + (active?' active':'');
+    btn.textContent = label;
+    btn.disabled = disabled;
+    if(!disabled) btn.onclick = () => { currentPage=page; renderTable(filtered); };
+    btnContainer.appendChild(btn);
+  };
+  addBtn('«', 1, false, currentPage===1);
+  addBtn('‹', currentPage-1, false, currentPage===1);
+  const start2 = Math.max(1, currentPage-2);
+  const end2 = Math.min(totalPages, start2+4);
+  for(let i=start2;i<=end2;i++) addBtn(i, i, i===currentPage);
+  addBtn('›', currentPage+1, false, currentPage===totalPages);
+  addBtn('»', totalPages, false, currentPage===totalPages);
+}
+
+// ─── EXPORT EXCEL ─────────────────────────────────────────────
+function exportExcel() {
+  if (!filtered.length) { alert('無資料可匯出'); return; }
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Dashboard 摘要
+  const data = filtered;
+  const total = data.length;
+  const bl = data.filter(r=>r['Severity']==='Blocker').length;
+  const cr = data.filter(r=>r['Severity']==='Critical').length;
+  const mj = data.filter(r=>r['Severity']==='Major').length;
+  const conf = data.filter(r=>r._status==='Confirm').length;
+  const pct = total ? Math.round(conf/total*100) : 0;
+
+  const summaryRows = [
+    ['Legion 32UL-20 — SIT/SVT Problem List 追蹤報告'],
+    ['匯出時間：' + new Date().toLocaleString('zh-TW')],
+    [],
+    ['【總覽 KPI】'],
+    ['項目','數值','說明'],
+    ['總問題數', total, `SIT: ${data.filter(r=>r._phase==='SIT').length} / SVT: ${data.filter(r=>r._phase==='SVT').length}`],
+    ['Blocker', bl, '直接阻擋驗測進行'],
+    ['Critical', cr, '功能無法驗證'],
+    ['Major', mj, ''],
+    ['收斂率（Confirm）', pct+'%', `Confirm ${conf} 筆`],
+    [],
+    ['【Severity × Domain 交叉分析】'],
+    ['Domain','Blocker','Critical','Major','合計'],
+  ];
+  ['SW','EE','ME','TPV LCM','Power'].forEach(d=>{
+    const sub = data.filter(r=>r['Issue Domain']===d);
+    summaryRows.push([d,
+      sub.filter(r=>r['Severity']==='Blocker').length,
+      sub.filter(r=>r['Severity']==='Critical').length,
+      sub.filter(r=>r['Severity']==='Major').length,
+      sub.length]);
+  });
+
+  summaryRows.push([]);
+  summaryRows.push(['【根因群組（Cluster）分析】']);
+  summaryRows.push(['群組代碼','群組名稱','Owner','總數','Blocker','Critical','Confirm','收斂率%']);
+
+  const clusterData = {};
+  data.forEach(r=>{
+    const c=r._cluster;
+    if(!clusterData[c]) clusterData[c]={total:0,bl:0,cr:0,conf:0};
+    clusterData[c].total++; if(r['Severity']==='Blocker') clusterData[c].bl++;
+    if(r['Severity']==='Critical') clusterData[c].cr++; if(r._status==='Confirm') clusterData[c].conf++;
+  });
+  Object.entries(clusterData).sort((a,b)=>b[1].total-a[1].total).forEach(([ck,v])=>{
+    const info=OWNER_MAP[ck]||{label:ck,owner:'PM'};
+    summaryRows.push([ck, info.label, info.owner, v.total, v.bl, v.cr, v.conf, v.total?Math.round(v.conf/v.total*100)+'%':'0%']);
+  });
+
+  const ws1 = XLSX.utils.aoa_to_sheet(summaryRows);
+  ws1['!cols'] = [{wch:20},{wch:30},{wch:20},{wch:8},{wch:8},{wch:8},{wch:8},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Dashboard摘要');
+
+  // Sheet 2: 問題明細
+  const headers = ['事務編碼','Phase','Severity','Issue Domain','Cluster群組','Owner','Module','Subject','狀態','Root Cause','Solution','創建時間','待辦人'];
+  const detailRows = [headers];
+  data.forEach(r=>{
+    detailRows.push([
+      r['事務編碼']||'', r._phase, r['Severity']||'', r['Issue Domain']||'',
+      OWNER_MAP[r._cluster]?.label||r._cluster, r._owner||'',
+      r['Module']||'', r['Subject']||'', r['狀態']||'',
+      r['Root Cause']||'', r['Solution']||'',
+      r['創建時間']||'', r['待辦人']||''
+    ]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(detailRows);
+  ws2['!cols'] = [{wch:22},{wch:6},{wch:10},{wch:10},{wch:26},{wch:16},{wch:22},{wch:50},{wch:14},{wch:40},{wch:40},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws2, '問題明細');
+
+  // Sheet 3: Blocker / Critical 專項追蹤
+  const bcHeaders = ['事務編碼','Phase','Severity','Domain','Cluster','Owner','Subject','狀態','Root Cause','Solution'];
+  const bcRows = [bcHeaders];
+  data.filter(r=>['Blocker','Critical'].includes(r['Severity'])).forEach(r=>{
+    bcRows.push([r['事務編碼']||'',r._phase,r['Severity']||'',r['Issue Domain']||'',
+      OWNER_MAP[r._cluster]?.label||r._cluster,r._owner||'',
+      r['Subject']||'',r['狀態']||'',r['Root Cause']||'',r['Solution']||'']);
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet(bcRows);
+  ws3['!cols'] = [{wch:22},{wch:6},{wch:10},{wch:10},{wch:26},{wch:16},{wch:50},{wch:14},{wch:40},{wch:40}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Blocker+Critical專項');
+
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `Legion32UL20_ProblemList_追蹤報告_${date}.xlsx`);
+}
+</script>
+</body>
+</html>
