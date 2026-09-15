@@ -397,7 +397,7 @@ function getStatus(val) {
   return s||'Unknown';
 }
 function parseRows(raw, phase) {
-  return raw.map(r=>({...r, _phase:phase, _cluster:classifyCluster(r), _status:getStatus(r['狀態']), _owner:OWNER_MAP[classifyCluster(r)]?.owner||'PM'}));
+  return raw.map(r=>{ const assignee=String(r['待辦人']||'').trim(); const owner=assignee||OWNER_MAP[classifyCluster(r)]?.owner||'PM'; return {...r,_phase:phase,_cluster:classifyCluster(r),_status:getStatus(r['狀態']),_owner:owner}; });
 }
 function getAllCurrent() { return [...store.current.SIT,...store.current.SVT]; }
 function getAllBaseline() { return [...store.baseline.SIT,...store.baseline.SVT]; }
