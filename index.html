@@ -165,7 +165,7 @@ canvas{max-height:200px}
 <body>
 
 <div class="header">
-  <div class="logo">Legion <span>32UL-20</span> · Problem Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v2</span></div>
+  <div class="logo" id="logo-text"><span id="logo-model">—</span> · Problem Dashboard <span style="font-size:11px;color:var(--muted);font-weight:400">v2</span></div>
   <div class="header-right">
     <span class="phase-badge pb-sit" id="sit-badge">SIT: 未載入</span>
     <span class="phase-badge pb-svt" id="svt-badge">SVT: 未載入</span>
@@ -409,6 +409,23 @@ function deltaStr(now,prev,invertGood=false) {
 }
 
 // ─── FILE LOAD ────────────────────────────────────────────────
+function updateModelName() {
+  // Pick External Model Name from the first loaded current file that has it
+  const all = getAllCurrent();
+  const modelVal = all.map(r => r['External Model Name']).find(v => v && String(v).trim());
+  const modelName = modelVal ? String(modelVal).trim() : null;
+  const el = document.getElementById('logo-model');
+  if (modelName) {
+    // Split at last space before hyphen-number pattern to highlight model number
+    const m = modelName.match(/^(.*?)\s*(\d[\w\-]+)$/);
+    el.innerHTML = m ? `${m[1]} <span style="color:var(--accent)">${m[2]}</span>` : `<span style="color:var(--accent)">${modelName}</span>`;
+    document.title = modelName + ' · Problem Dashboard';
+  } else {
+    el.innerHTML = '<span style="color:var(--muted)">—</span>';
+    document.title = 'SIT/SVT Problem List Dashboard v2';
+  }
+}
+
 function loadFile(event,phase,slot) {
   const file=event.target.files[0]; if(!file) return;
   const reader=new FileReader();
@@ -420,6 +437,7 @@ function loadFile(event,phase,slot) {
       const data=parseRows(rows,phase);
       store[slot][phase]=data;
       updateSlotUI(phase,slot,file.name,data.length);
+      if(slot==='current') updateModelName();
       rebuildAll();
     } catch(err){alert('讀取失敗：'+err.message);}
   };
@@ -429,6 +447,7 @@ function loadFile(event,phase,slot) {
 function clearSlot(event,phase,slot) {
   event.stopPropagation();
   store[slot][phase]=[];
+  if(slot==='current') updateModelName();
   const p=phase.toLowerCase(), s=slot==='current'?'':'-base';
   const slotId=p+s+'-slot', countId=p+s+'-count', nameId=p+s+'-name', clearId=p+s+'-clear';
   document.getElementById(slotId).classList.remove('loaded','baseline-loaded');
@@ -743,7 +762,8 @@ function exportExcel() {
   const total=data.length, bl=data.filter(r=>r['Severity']==='Blocker').length;
   const cr=data.filter(r=>r['Severity']==='Critical').length, mj=data.filter(r=>r['Severity']==='Major').length;
   const conf=data.filter(r=>r._status==='Confirm').length, pct=total?Math.round(conf/total*100):0;
-  const s1rows=[['Legion 32UL-20 — SIT/SVT Problem List 追蹤報告'],['匯出時間：'+new Date().toLocaleString('zh-TW')],[],
+  const _mname = getAllCurrent().map(r=>r['External Model Name']).find(v=>v&&String(v).trim()) || 'Problem List';
+  const s1rows=[[_mname+' — SIT/SVT Problem List 追蹤報告'],['匯出時間：'+new Date().toLocaleString('zh-TW')],[],
     ['【總覽 KPI】'],['項目','本週','說明'],
     ['總問題數',total,`SIT: ${data.filter(r=>r._phase==='SIT').length} / SVT: ${data.filter(r=>r._phase==='SVT').length}`],
     ['Blocker',bl,'直接阻擋驗測'],['Critical',cr,'功能無法驗證'],['Major',mj,''],['收斂率',pct+'%',`Confirm ${conf} 筆`],[],
@@ -766,7 +786,8 @@ function exportDiffExcel() {
   if(!diffResult){alert('請先載入比較基準');return;}
   const {newIssues,resolved,changed,stale,curr,base}=diffResult;
   const wb=XLSX.utils.book_new();
-  const s0=[['Legion 32UL-20 — 週差異報告'],['產出時間：'+new Date().toLocaleString('zh-TW')],['上週筆數：'+base.length+'  本週筆數：'+curr.length],[],
+  const _mn2 = getAllCurrent().map(r=>r['External Model Name']).find(v=>v&&String(v).trim()) || 'Problem List';
+  const s0=[[_mn2+' — 週差異報告'],['產出時間：'+new Date().toLocaleString('zh-TW')],['上週筆數：'+base.length+'  本週筆數：'+curr.length],[],
     ['指標','數量'],['🆕 新增問題',newIssues.length],['✅ 已收斂',resolved.length],['🔄 狀態變動',changed.length],['❌ 連續停滯',stale.length]];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s0),'差異摘要');
   const stH=['事務編碼','Severity','Domain','Subject','上週狀態','本週狀態','Owner'];
