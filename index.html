@@ -599,7 +599,14 @@ function renderCharts(data) {
   dc('chart-owner');
   const ctx=document.getElementById('chart-owner').getContext('2d');
   charts['chart-owner']=new Chart(ctx,{type:'bar',data:{labels:ownersSorted.map(o=>o[0]),datasets:[{label:'筆數',data:ownersSorted.map(o=>o[1]),
-    backgroundColor:ownersSorted.map(o=>{const n=o[0];return n.includes('Jet')?'#4f8ef7':n.includes('Ace')?'#34d399':n.includes('Heper')?'#a78bfa':n.includes('Miller')?'#fb923c':n.includes('Iven')?'#f43f5e':'#8b90a8';}),
+    backgroundColor:ownersSorted.map(o=>{
+        // Color by domain: find most common domain for this owner
+        const ownerRows = data.filter(r=>r._owner===o[0]);
+        const domainCounts = {};
+        ownerRows.forEach(r=>{const d=String(r['Issue Domain']||'');domainCounts[d]=(domainCounts[d]||0)+1;});
+        const topDomain = Object.entries(domainCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+        return topDomain==='SW'?'#4f8ef7':topDomain==='EE'?'#34d399':topDomain==='ME'?'#a78bfa':topDomain.includes('LCM')?'#fb923c':topDomain==='Power'?'#f43f5e':'#8b90a8';
+      }),
     borderRadius:4,borderWidth:0}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#8b90a8',font:{size:10}},grid:{color:'rgba(46,51,71,.5)'},border:{color:'#2e3347'}},y:{ticks:{color:'#8b90a8',font:{size:10}},grid:{display:false},border:{color:'#2e3347'}}}}});
@@ -619,18 +626,29 @@ function renderCompareCharts() {
 // ─── CLUSTER TABLE ────────────────────────────────────────────
 function renderClusterTable(data) {
   const cd={};
-  data.forEach(r=>{const c=r._cluster;if(!cd[c])cd[c]={total:0,bl:0,cr:0,conf:0};cd[c].total++;if(r['Severity']==='Blocker')cd[c].bl++;if(r['Severity']==='Critical')cd[c].cr++;if(r._status==='Confirm')cd[c].conf++;});
+  data.forEach(r=>{
+    const c=r._cluster;
+    if(!cd[c])cd[c]={total:0,bl:0,cr:0,conf:0,owners:{}};
+    cd[c].total++;
+    if(r['Severity']==='Blocker')cd[c].bl++;
+    if(r['Severity']==='Critical')cd[c].cr++;
+    if(r._status==='Confirm')cd[c].conf++;
+    // Collect actual owners from 待辦人
+    if(r._owner) cd[c].owners[r._owner]=(cd[c].owners[r._owner]||0)+1;
+  });
   const sorted=Object.entries(cd).sort((a,b)=>b[1].total-a[1].total);
   document.getElementById('cluster-tbody').innerHTML=sorted.map(([ck,v])=>{
-    const info=OWNER_MAP[ck]||{label:ck,owner:'PM',color:'#8b90a8'};
+    const info=OWNER_MAP[ck]||{label:ck,color:'#8b90a8'};
     const pct=v.total?Math.round(v.conf/v.total*100):0;
+    // Show top actual owner(s) from data
+    const topOwner = Object.entries(v.owners).sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,2).join(' / ') || 'PM';
     return `<tr onclick="document.getElementById('f-cluster').value='${ck}';applyFilters()" style="cursor:pointer">
       <td style="font-size:11px;color:${info.color};font-weight:600;white-space:nowrap">${info.label}</td>
       <td style="font-weight:600">${v.total}</td>
       <td>${v.bl?`<span class="sev-pill p-bl">${v.bl}</span>`:'—'}</td>
       <td>${v.cr?`<span class="sev-pill p-cr">${v.cr}</span>`:'—'}</td>
       <td><div class="bar-cell"><div class="mini-bar"><div class="mini-fill" style="width:${pct}%;background:${info.color}"></div></div><div class="mini-pct">${pct}%</div></div></td>
-      <td style="font-size:11px;color:var(--muted)">${info.owner}</td></tr>`;
+      <td style="font-size:11px;color:var(--muted)">${topOwner}</td></tr>`;
   }).join('');
 }
 
@@ -779,7 +797,8 @@ function exportExcel() {
   const bch=['事務編碼','Phase','Severity','Domain','Cluster','Owner','Subject','狀態','Root Cause','Solution'];
   const ws3=XLSX.utils.aoa_to_sheet([bch,...data.filter(r=>['Blocker','Critical'].includes(r['Severity'])).map(r=>[r['事務編碼']||'',r._phase,r['Severity']||'',r['Issue Domain']||'',OWNER_MAP[r._cluster]?.label||r._cluster,r._owner||'',r['Subject']||'',r['狀態']||'',r['Root Cause']||'',r['Solution']||''])]);
   ws3['!cols']=[{wch:22},{wch:6},{wch:10},{wch:10},{wch:26},{wch:16},{wch:50},{wch:14},{wch:40},{wch:40}];XLSX.utils.book_append_sheet(wb,ws3,'Blocker+Critical專項');
-  XLSX.writeFile(wb,`Legion32UL20_問題追蹤_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`);
+  const _fname = (getAllCurrent().map(r=>r['External Model Name']).find(v=>v&&String(v).trim())||'ProblemList').replace(/[^a-zA-Z0-9_\-]/g,'_');
+  XLSX.writeFile(wb, _fname+'_問題追蹤_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx');
 }
 
 function exportDiffExcel() {
@@ -798,7 +817,8 @@ function exportDiffExcel() {
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([rH,...resolved.map(({curr:r,prevSt})=>[r['事務編碼'],r['Severity'],r['Issue Domain'],r['Subject'],prevSt,r._status])]),'本週收斂');
   const cH=['事務編碼','Severity','Domain','Subject','上週狀態','本週狀態','Owner'];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([cH,...changed.map(({curr:r,prevSt})=>[r['事務編碼'],r['Severity'],r['Issue Domain'],r['Subject'],prevSt,r._status,r._owner])]),'狀態變動');
-  XLSX.writeFile(wb,`Legion32UL20_週差異報告_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`);
+  const _fn2 = (getAllCurrent().map(r=>r['External Model Name']).find(v=>v&&String(v).trim())||'ProblemList').replace(/[^a-zA-Z0-9_\-]/g,'_');
+  XLSX.writeFile(wb, _fn2+'_週差異報告_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx');
 }
 </script>
 </body>
