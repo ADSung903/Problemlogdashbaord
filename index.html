@@ -160,6 +160,20 @@ canvas{max-height:200px}
   .kpi-row,.diff-kpi-row{grid-template-columns:repeat(2,1fr)}
   .grid2,.grid3,.import-slots,.import-row{grid-template-columns:1fr}
 }
+.settings-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer}
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal-back[hidden]{display:none}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;width:min(520px,92vw)}
+.modal-box h3{margin:0 0 12px;font-size:15px}
+.modal-box label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.modal-box input{width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:8px 10px;font-size:13px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.modal-actions button{border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.modal-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.ur-link{color:var(--accent);text-decoration:none}.ur-link:hover{text-decoration:underline}
+.func-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;z-index:60;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -170,22 +184,23 @@ canvas{max-height:200px}
     <span class="phase-badge pb-sit" id="sit-badge">SIT: 未載入</span>
     <span class="phase-badge pb-svt" id="svt-badge">SVT: 未載入</span>
     <span class="last-update" id="last-update"></span>
+    <button class="settings-btn" onclick="openSettings()" title="設定">⚙ 設定</button>
   </div>
 </div>
 
 <!-- Import area -->
 <div style="padding:16px 24px 0;background:var(--surface);border-bottom:1px solid var(--border)">
-  <div style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px">本週 Log（主要資料）</div>
+  <div style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px">本週 Log（主要資料）<span style="text-transform:none;letter-spacing:0;font-weight:400"> · 可一次選多個檔案,例如兩個機種各一份</span></div>
   <div class="import-slots" style="margin:0 0 14px">
     <div class="slot" id="sit-slot" onclick="document.getElementById('sit-file').click()">
-      <input type="file" id="sit-file" accept=".xls,.xlsx" onchange="loadFile(event,'SIT','current')">
+      <input type="file" id="sit-file" accept=".xls,.xlsx" multiple onchange="loadFile(event,'SIT','current')">
       <button class="slot-clear" id="sit-clear" style="display:none" onclick="clearSlot(event,'SIT','current')">×</button>
       <div class="slot-phase slot-sit">SIT — 本週</div>
       <div class="slot-count" id="sit-count">—</div>
       <div class="slot-name" id="sit-name">點擊匯入</div>
     </div>
     <div class="slot" id="svt-slot" onclick="document.getElementById('svt-file').click()">
-      <input type="file" id="svt-file" accept=".xls,.xlsx" onchange="loadFile(event,'SVT','current')">
+      <input type="file" id="svt-file" accept=".xls,.xlsx" multiple onchange="loadFile(event,'SVT','current')">
       <button class="slot-clear" id="svt-clear" style="display:none" onclick="clearSlot(event,'SVT','current')">×</button>
       <div class="slot-phase slot-svt">SVT — 本週</div>
       <div class="slot-count" id="svt-count">—</div>
@@ -195,14 +210,14 @@ canvas{max-height:200px}
   <div style="font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px">上週 Log（比較基準，選填）</div>
   <div class="import-slots" style="margin:0 0 14px">
     <div class="slot" id="sit-base-slot" onclick="document.getElementById('sit-base-file').click()" style="border-style:dashed">
-      <input type="file" id="sit-base-file" accept=".xls,.xlsx" onchange="loadFile(event,'SIT','baseline')">
+      <input type="file" id="sit-base-file" accept=".xls,.xlsx" multiple onchange="loadFile(event,'SIT','baseline')">
       <button class="slot-clear" id="sit-base-clear" style="display:none" onclick="clearSlot(event,'SIT','baseline')">×</button>
       <div class="slot-phase slot-base">SIT — 上週基準</div>
       <div class="slot-count" id="sit-base-count" style="color:var(--muted)">—</div>
       <div class="slot-name" id="sit-base-name">點擊匯入比較基準</div>
     </div>
     <div class="slot" id="svt-base-slot" onclick="document.getElementById('svt-base-file').click()" style="border-style:dashed">
-      <input type="file" id="svt-base-file" accept=".xls,.xlsx" onchange="loadFile(event,'SVT','baseline')">
+      <input type="file" id="svt-base-file" accept=".xls,.xlsx" multiple onchange="loadFile(event,'SVT','baseline')">
       <button class="slot-clear" id="svt-base-clear" style="display:none" onclick="clearSlot(event,'SVT','baseline')">×</button>
       <div class="slot-phase slot-base">SVT — 上週基準</div>
       <div class="slot-count" id="svt-base-count" style="color:var(--muted)">—</div>
@@ -231,6 +246,7 @@ canvas{max-height:200px}
     <div id="dashboard-body" style="display:none">
       <div class="toolbar">
         <span class="toolbar-label">過濾：</span>
+        <select id="f-model" onchange="applyFilters()" style="display:none"><option value="">機種（全部）</option></select>
         <select id="f-phase" onchange="applyFilters()"><option value="">Phase（全部）</option><option value="SIT">SIT</option><option value="SVT">SVT</option></select>
         <select id="f-sev" onchange="applyFilters()"><option value="">Severity（全部）</option><option value="Blocker">Blocker</option><option value="Critical">Critical</option><option value="Major">Major</option></select>
         <select id="f-domain" onchange="applyFilters()"><option value="">Domain（全部）</option><option value="SW">SW</option><option value="EE">EE</option><option value="ME">ME</option><option value="TPV LCM">LCM</option><option value="Power">Power</option></select>
@@ -243,8 +259,8 @@ canvas{max-height:200px}
       </div>
       <div class="kpi-row">
         <div class="kpi total"><div class="kpi-label">總問題數</div><div class="kpi-val" id="k-total">0</div><div class="kpi-sub" id="k-total-sub"></div><div class="delta" id="k-total-d"></div></div>
-        <div class="kpi bl"><div class="kpi-label">Blocker</div><div class="kpi-val" id="k-bl">0</div><div class="kpi-sub">阻擋驗測進行</div><div class="delta" id="k-bl-d"></div></div>
-        <div class="kpi cr"><div class="kpi-label">Critical</div><div class="kpi-val" id="k-cr">0</div><div class="kpi-sub">功能無法驗證</div><div class="delta" id="k-cr-d"></div></div>
+        <div class="kpi bl"><div class="kpi-label">Blocker</div><div class="kpi-val" id="k-bl">0</div><div class="kpi-sub" id="k-bl-sub">阻擋驗測進行</div><div class="delta" id="k-bl-d"></div></div>
+        <div class="kpi cr"><div class="kpi-label">Critical</div><div class="kpi-val" id="k-cr">0</div><div class="kpi-sub" id="k-cr-sub">功能無法驗證</div><div class="delta" id="k-cr-d"></div></div>
         <div class="kpi mj"><div class="kpi-label">Major</div><div class="kpi-val" id="k-mj">0</div><div class="kpi-sub" id="k-mj-sub"></div><div class="delta" id="k-mj-d"></div></div>
         <div class="kpi conv"><div class="kpi-label">收斂率（Confirm）</div><div class="kpi-val" id="k-conv">0%</div><div class="kpi-sub" id="k-conv-sub"></div><div class="delta" id="k-conv-d"></div></div>
       </div>
@@ -259,6 +275,15 @@ canvas{max-height:200px}
           <table class="c-table"><thead><tr><th>群組</th><th>筆數</th><th>BL</th><th>CR</th><th>收斂</th><th>Owner</th></tr></thead><tbody id="cluster-tbody"></tbody></table>
         </div>
         <div class="panel"><div class="panel-title">責任人負荷</div><canvas id="chart-owner" style="max-height:260px"></canvas></div>
+      </div>
+      <div class="panel" id="model-panel" style="display:none;margin-bottom:12px">
+        <div class="panel-title">機種並排比較（有上週基準時顯示變化）</div>
+        <div class="table-wrap" style="border:none"><table class="c-table"><thead id="model-thead"></thead><tbody id="model-tbody"></tbody></table></div>
+      </div>
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-title">各功能更新檢查 — Root Cause 填寫與狀態推進</div>
+        <div class="table-wrap" style="border:none"><table class="c-table"><thead><tr><th>機種</th><th>功能</th><th>本週筆數</th><th>未結</th><th>RC 填寫率</th><th>上週</th><th>變化</th><th>RC 新填</th><th>狀態推進</th><th>判定</th></tr></thead><tbody id="func-tbody-dash"></tbody></table></div>
+        <div class="func-note" id="func-note-dash"></div>
       </div>
       <div class="panel grid2" id="compare-panel" style="display:none;grid-template-columns:1fr 1fr;margin-bottom:12px">
         <div><div class="panel-title">SIT vs SVT — Severity</div><canvas id="chart-compare"></canvas></div>
@@ -289,6 +314,11 @@ canvas{max-height:200px}
       <div class="grid2" style="margin-bottom:12px">
         <div class="panel"><div class="panel-title">問題數量變化</div><canvas id="chart-diff-count"></canvas></div>
         <div class="panel"><div class="panel-title">Blocker / Critical 週趨勢</div><canvas id="chart-diff-sev"></canvas></div>
+      </div>
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-title">各功能更新檢查 — Root Cause 填寫與狀態推進</div>
+        <div class="table-wrap" style="border:none"><table class="c-table"><thead><tr><th>機種</th><th>功能</th><th>本週筆數</th><th>未結</th><th>RC 填寫率</th><th>上週</th><th>變化</th><th>RC 新填</th><th>狀態推進</th><th>判定</th></tr></thead><tbody id="func-tbody-diff"></tbody></table></div>
+        <div class="func-note" id="func-note-diff"></div>
       </div>
       <!-- Stale blockers -->
       <div class="panel" style="margin-bottom:12px" id="stale-panel">
@@ -323,6 +353,7 @@ canvas{max-height:200px}
       <span class="toolbar-label">搜尋：</span>
       <input id="search" type="text" placeholder="ID / Subject / Module…" oninput="applyFilters()"
         style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 10px;font-size:12px;width:200px">
+      <select id="f-model2" onchange="applyFilters()" style="display:none"><option value="">機種（全部）</option></select>
       <select id="f-phase2" onchange="applyFilters()"><option value="">Phase（全部）</option><option value="SIT">SIT</option><option value="SVT">SVT</option></select>
       <select id="f-sev2" onchange="applyFilters()"><option value="">Severity（全部）</option><option value="Blocker">Blocker</option><option value="Critical">Critical</option><option value="Major">Major</option></select>
       <select id="f-status2" onchange="applyFilters()"><option value="">狀態（全部）</option><option value="New">New</option><option value="Analyzing">Analyzing</option><option value="Confirm">Confirm</option></select>
@@ -345,23 +376,36 @@ canvas{max-height:200px}
 
 </div><!-- /main -->
 
+<div class="modal-back" id="settings-modal" hidden onclick="if(event.target===this)closeSettings()">
+  <div class="modal-box">
+    <h3>⚙ 設定</h3>
+    <label for="ur-prefix">UR 連結前綴(填了之後,表格裡的 ID 會變成可點的 UR 連結;只存在這台電腦的瀏覽器)</label>
+    <input id="ur-prefix" placeholder="例:https://<內部系統>/ViewProblem.aspx?Problem=">
+    <div class="func-note">UR 編號取自匯出檔的「#」欄(7 位數);沒有「#」欄時,若事務編碼是純數字就用它。</div>
+    <div class="modal-actions"><button onclick="closeSettings()">取消</button><button class="primary" onclick="saveSettings()">儲存</button></div>
+  </div>
+</div>
+
 <script>
 // ─── CONSTANTS ────────────────────────────────────────────────
+// owner 只在 UR 沒填「待辦人」時當預設值;用功能別,不寫人名(此 repo 公開)
 const OWNER_MAP = {
-  'A_FW_FFC':  {label:'A FW FFC Spec未導入',  owner:'Jet (FW)',      color:'#4f8ef7'},
-  'B_OSD_UI':  {label:'B OSD UI 外觀設計',     owner:'Jet (FW)',      color:'#4f8ef7'},
-  'C_OSD_Tree':{label:'C OSD Tree Spec對齊',   owner:'Jet + PM',      color:'#818cf8'},
-  'D_OSD_Func':{label:'D OSD 功能行為異常',    owner:'Jet (FW)',      color:'#4f8ef7'},
-  'E_Lang':    {label:'E 語言翻譯亂碼',        owner:'Jet (FW)',      color:'#4f8ef7'},
-  'F_Compat':  {label:'F 現場相容性驗測',      owner:'Ace + Jet',     color:'#34d399'},
-  'G_EDID':    {label:'G EE EDID/Timing',      owner:'Ace (EE)',      color:'#34d399'},
-  'H_HW':      {label:'H EE 硬體/文件確認',   owner:'Ace (EE)',      color:'#34d399'},
-  'I_ME':      {label:'I ME 機構/落下',        owner:'Heper/Haibao',  color:'#a78bfa'},
-  'J_LCM':     {label:'J LCM 面板PQ/Thermal', owner:'Miller/Yating', color:'#fb923c'},
-  'K_Power':   {label:'K Power 電源板',        owner:'Iven/QingFeng', color:'#f43f5e'},
-  'L_SW_Misc': {label:'L SW 量產雜項',         owner:'Jet + Joey',    color:'#818cf8'},
-  'Z_Other':   {label:'Z 其他',               owner:'PM追蹤',        color:'#8b90a8'},
+  'A_FW_FFC':  {label:'A FW FFC Spec未導入',  owner:'FW',        color:'#4f8ef7'},
+  'B_OSD_UI':  {label:'B OSD UI 外觀設計',     owner:'FW',        color:'#4f8ef7'},
+  'C_OSD_Tree':{label:'C OSD Tree Spec對齊',   owner:'FW + PM',   color:'#818cf8'},
+  'D_OSD_Func':{label:'D OSD 功能行為異常',    owner:'FW',        color:'#4f8ef7'},
+  'E_Lang':    {label:'E 語言翻譯亂碼',        owner:'FW',        color:'#4f8ef7'},
+  'F_Compat':  {label:'F 現場相容性驗測',      owner:'EE + FW',   color:'#34d399'},
+  'G_EDID':    {label:'G EE EDID/Timing',      owner:'EE',        color:'#34d399'},
+  'H_HW':      {label:'H EE 硬體/文件確認',   owner:'EE',        color:'#34d399'},
+  'I_ME':      {label:'I ME 機構/落下',        owner:'ME',        color:'#a78bfa'},
+  'J_LCM':     {label:'J LCM 面板PQ/Thermal', owner:'LCM',       color:'#fb923c'},
+  'K_Power':   {label:'K Power 電源板',        owner:'Power',     color:'#f43f5e'},
+  'L_SW_Misc': {label:'L SW 量產雜項',         owner:'SW',        color:'#818cf8'},
+  'Z_Other':   {label:'Z 其他',               owner:'PM追蹤',    color:'#8b90a8'},
 };
+const DOMAINS = ['SW','EE','ME','TPV LCM','Power'];
+const UR_PREFIX_KEY = 'pld_ur_prefix';
 
 // ─── STATE ────────────────────────────────────────────────────
 const store = { current:{SIT:[],SVT:[]}, baseline:{SIT:[],SVT:[]} };
@@ -396,11 +440,40 @@ function getStatus(val) {
   if(s.startsWith('Close')||s.startsWith('Waive')) return 'Closed';
   return s||'Unknown';
 }
-function parseRows(raw, phase) {
-  return raw.map(r=>{ const assignee=String(r['待辦人']||'').trim(); const owner=assignee||OWNER_MAP[classifyCluster(r)]?.owner||'PM'; return {...r,_phase:phase,_cluster:classifyCluster(r),_status:getStatus(r['狀態']),_owner:owner}; });
+function parseRows(raw, phase, fileName) {
+  const fallbackModel = String(fileName||'').replace(/\.[^.]+$/,'');
+  return raw.map(r=>{
+    const assignee=String(r['待辦人']||'').trim();
+    const owner=assignee||OWNER_MAP[classifyCluster(r)]?.owner||'PM';
+    const model=String(r['External Model Name']||'').trim()||fallbackModel||'未標示機種';
+    const urId=String(r['#']||'').trim()||(/^\d{5,}$/.test(String(r['事務編碼']||'').trim())?String(r['事務編碼']).trim():'');
+    return {...r,_phase:phase,_cluster:classifyCluster(r),_status:getStatus(r['狀態']),_owner:owner,_model:model,_urId:urId,_rc:rcFilled(r['Root Cause'])};
+  });
 }
+// Root Cause 有實質內容才算「已填」
+function rcFilled(v) {
+  const s=String(v==null?'':v).trim();
+  return !!s && !/^(-+|\/|n\/?a|na|tbd|tbc|待確認|待分析|分析中|無|none|null)$/i.test(s);
+}
+function rowKey(r) { return r._model+'|'+String(r['事務編碼']||r._urId||''); }
 function getAllCurrent() { return [...store.current.SIT,...store.current.SVT]; }
 function getAllBaseline() { return [...store.baseline.SIT,...store.baseline.SVT]; }
+function getModels(rows) { return [...new Set(rows.map(r=>r._model))].sort(); }
+function pctOf(n,d) { return d?Math.round(n/d*100):0; }
+function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function urPrefix() { try { return localStorage.getItem(UR_PREFIX_KEY)||''; } catch(e) { return ''; } }
+// ID 欄:有 UR 連結前綴且有 UR 編號時變成可點連結
+function idCell(r) {
+  const label=esc(r['事務編碼']||r._urId||'');
+  const p=urPrefix();
+  if(p&&r._urId) return `<a class="ur-link" href="${esc(p+r._urId)}" target="_blank" rel="noopener">${label}</a>`;
+  return label;
+}
+function toast(msg) {
+  let el=document.getElementById('toast');
+  if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el);}
+  el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2600);
+}
 function deltaStr(now,prev,invertGood=false) {
   if(prev===undefined||prev===null) return '';
   const d=now-prev; if(d===0) return '<span class="delta same">→ 同上週</span>';
@@ -410,11 +483,15 @@ function deltaStr(now,prev,invertGood=false) {
 
 // ─── FILE LOAD ────────────────────────────────────────────────
 function updateModelName() {
-  // Pick External Model Name from the first loaded current file that has it
   const all = getAllCurrent();
-  const modelVal = all.map(r => r['External Model Name']).find(v => v && String(v).trim());
-  const modelName = modelVal ? String(modelVal).trim() : null;
+  const models = getModels(all);
   const el = document.getElementById('logo-model');
+  if (models.length > 1) {
+    el.innerHTML = `<span style="color:var(--accent)">${models.length} 機種</span>`;
+    document.title = models.join(' / ') + ' · Problem Dashboard';
+    return;
+  }
+  const modelName = models[0] || null;
   if (modelName) {
     // Split at last space before hyphen-number pattern to highlight model number
     const m = modelName.match(/^(.*?)\s*(\d[\w\-]+)$/);
@@ -426,27 +503,43 @@ function updateModelName() {
   }
 }
 
-function loadFile(event,phase,slot) {
-  const file=event.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try {
-      const wb=XLSX.read(e.target.result,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      const data=parseRows(rows,phase);
-      store[slot][phase]=data;
-      updateSlotUI(phase,slot,file.name,data.length);
-      if(slot==='current') updateModelName();
-      rebuildAll();
-    } catch(err){alert('讀取失敗：'+err.message);}
-  };
-  reader.readAsArrayBuffer(file);
-  event.target.value='';
+// 一個匯入格可放多個檔案(例如兩個機種各一份),依「機種 + 事務編碼」去重後合併;× 清除
+const slotFiles = { current:{SIT:[],SVT:[]}, baseline:{SIT:[],SVT:[]} };
+function readXlsx(file) {
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try {
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        resolve(XLSX.utils.sheet_to_json(ws,{defval:''}));
+      } catch(err){reject(err);}
+    };
+    reader.onerror=()=>reject(reader.error);
+    reader.readAsArrayBuffer(file);
+  });
+}
+async function loadFile(event,phase,slot) {
+  const files=[...event.target.files]; event.target.value='';
+  if(!files.length) return;
+  try {
+    const merged=new Map(store[slot][phase].map(r=>[rowKey(r),r]));
+    for(const file of files) {
+      const data=parseRows(await readXlsx(file),phase,file.name);
+      data.forEach(r=>merged.set(rowKey(r),r));
+      slotFiles[slot][phase].push(file.name);
+    }
+    store[slot][phase]=[...merged.values()];
+    const names=slotFiles[slot][phase];
+    updateSlotUI(phase,slot,names.length>1?`${names.length} 個檔案 · ${getModels(store[slot][phase]).length} 機種`:names[0],store[slot][phase].length);
+    if(slot==='current') updateModelName();
+    rebuildAll();
+  } catch(err){ toast('讀取失敗:'+err.message); }
 }
 function clearSlot(event,phase,slot) {
   event.stopPropagation();
   store[slot][phase]=[];
+  slotFiles[slot][phase]=[];
   if(slot==='current') updateModelName();
   const p=phase.toLowerCase(), s=slot==='current'?'':'-base';
   const slotId=p+s+'-slot', countId=p+s+'-count', nameId=p+s+'-name', clearId=p+s+'-clear';
@@ -480,6 +573,8 @@ function rebuildAll() {
   const hasData=all.length>0;
   document.getElementById('dashboard-empty').style.display=hasData?'none':'';
   document.getElementById('dashboard-body').style.display=hasData?'':'none';
+  const hasBase=getAllBaseline().length>0;
+  if(hasBase&&hasData) computeDiff(); else diffResult=null;
   if(hasData) {
     populateFilterOptions(all);
     applyFilters();
@@ -487,13 +582,87 @@ function rebuildAll() {
       document.getElementById('compare-panel').style.display='grid';
       renderCompareCharts();
     } else document.getElementById('compare-panel').style.display='none';
+    renderModelCompare();
+    renderFuncUpdate('func-tbody-dash','func-note-dash');
   }
-  const hasBase=getAllBaseline().length>0;
-  if(hasBase&&hasData) { computeDiff(); renderDiff(); }
+  if(hasBase&&hasData) { renderDiff(); }
   else { document.getElementById('diff-empty').style.display=''; document.getElementById('diff-body').style.display='none'; document.getElementById('diff-badge').style.display='none'; }
 }
 
+// ─── 機種並排 ─────────────────────────────────────────────────
+function modelMetrics(rows) {
+  const total=rows.length, bl=cnt(rows,'Severity','Blocker'), cr=cnt(rows,'Severity','Critical'), mj=cnt(rows,'Severity','Major');
+  const open=rows.filter(r=>!['Confirm','Closed'].includes(r._status)).length;
+  const conf=rows.filter(r=>r._status==='Confirm').length;
+  const rc=rows.filter(r=>r._rc).length;
+  return {total,bl,cr,mj,open,conf,rc,blP:pctOf(bl,total),crP:pctOf(cr,total),mjP:pctOf(mj,total),convP:pctOf(conf,total),rcP:pctOf(rc,total)};
+}
+const MODEL_ROWS = [
+  ['總問題數','total'],['未結(New/Analyzing)','open'],['Blocker','bl'],['Blocker 佔比','blP','%'],['Critical','cr'],['Critical 佔比','crP','%'],
+  ['Major','mj'],['Major 佔比','mjP','%'],['收斂率(Confirm)','convP','%'],['Root Cause 填寫率','rcP','%']];
+function renderModelCompare() {
+  const cur=getAllCurrent(), base=getAllBaseline(), models=getModels(cur);
+  const panel=document.getElementById('model-panel');
+  if(models.length<2){panel.style.display='none';return;}
+  panel.style.display='';
+  const cm=models.map(m=>modelMetrics(cur.filter(r=>r._model===m)));
+  const bm=models.map(m=>{const b=base.filter(r=>r._model===m);return b.length?modelMetrics(b):null;});
+  document.getElementById('model-thead').innerHTML='<tr><th>指標</th>'+models.map(m=>`<th>${esc(m)}</th>`).join('')+'</tr>';
+  document.getElementById('model-tbody').innerHTML=MODEL_ROWS.map(([label,k,unit])=>'<tr><td>'+label+'</td>'+cm.map((v,i)=>{
+    const prev=bm[i]?bm[i][k]:null, d=prev==null?null:v[k]-prev;
+    const good=['convP','rcP'].includes(k)?d>0:d<0;
+    const dTxt=d==null||d===0?'':` <span class="delta ${good?'up':'dn'}" style="display:inline">${d>0?'+':''}${d}${unit||''}</span>`;
+    return `<td style="font-weight:600">${v[k]}${unit||''}${dTxt}</td>`;
+  }).join('')+'</tr>').join('');
+}
+
+// ─── 各功能更新檢查(Root Cause 填寫 + 狀態推進,對照上週)────────────
+function funcUpdateRows() {
+  const cur=getAllCurrent(), base=getAllBaseline();
+  const baseMap=new Map(base.map(r=>[rowKey(r),r]));
+  const models=getModels(cur), hasBase=base.length>0, out=[];
+  models.forEach(m=>{
+    [...DOMAINS,'其他'].forEach(d=>{
+      const inDom=r=>d==='其他'?!DOMAINS.includes(r['Issue Domain']):r['Issue Domain']===d;
+      const rows=cur.filter(r=>r._model===m&&inDom(r));
+      if(!rows.length) return;
+      const open=rows.filter(r=>!['Confirm','Closed'].includes(r._status));
+      const rc=rows.filter(r=>r._rc).length;
+      const brows=base.filter(r=>r._model===m&&inDom(r));
+      const brc=brows.filter(r=>r._rc).length;
+      let rcNew=0, moved=0;
+      rows.forEach(r=>{const p=baseMap.get(rowKey(r)); if(!p) return; if(r._rc&&!p._rc) rcNew++; if(getStatus(p['狀態'])!==r._status) moved++;});
+      const verdict=!hasBase?'—':(rcNew>0||moved>0)?'有更新':(open.length?'⚠ 無更新':'—');
+      out.push({model:m,domain:d,total:rows.length,open:open.length,rc,rcP:pctOf(rc,rows.length),brcP:hasBase&&brows.length?pctOf(brc,brows.length):null,rcNew,moved,verdict});
+    });
+  });
+  return out;
+}
+function renderFuncUpdate(tbodyId,noteId) {
+  const rows=funcUpdateRows(), hasBase=getAllBaseline().length>0;
+  const tb=document.getElementById(tbodyId); if(!tb) return;
+  tb.innerHTML=rows.length?rows.map(r=>{
+    const dP=r.brcP==null?'':r.rcP-r.brcP;
+    const vC=r.verdict==='有更新'?'color:var(--resolved)':r.verdict.startsWith('⚠')?'color:var(--danger);font-weight:700':'color:var(--muted)';
+    return `<tr><td style="white-space:nowrap">${esc(r.model)}</td><td><span class="domain-tag d-${esc(r.domain.replace('TPV ',''))}">${esc(r.domain)}</span></td>
+      <td>${r.total}</td><td>${r.open}</td>
+      <td><div class="bar-cell"><div class="mini-bar"><div class="mini-fill" style="width:${r.rcP}%;background:var(--accent)"></div></div><div class="mini-pct">${r.rcP}%</div></div></td>
+      <td>${r.brcP==null?'—':r.brcP+'%'}</td>
+      <td>${dP===''?'—':`<span class="delta ${dP>0?'up':dP<0?'dn':'same'}" style="display:inline">${dP>0?'+':''}${dP}%</span>`}</td>
+      <td>${hasBase?r.rcNew:'—'}</td><td>${hasBase?r.moved:'—'}</td><td style="${vC}">${r.verdict}</td></tr>`;
+  }).join(''):'<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--muted)">無資料</td></tr>';
+  const note=document.getElementById(noteId);
+  if(note) note.textContent=hasBase?'「有更新」= 本週有新填 Root Cause 或狀態有推進;「⚠ 無更新」= 還有未結問題,但 Root Cause 與狀態都跟上週一樣。':'匯入「上週基準」後,會顯示 RC 新填、狀態推進與是否有更新。';
+}
+
 function populateFilterOptions(all) {
+  ['f-model','f-model2'].forEach(id=>{
+    const sel=document.getElementById(id), keep=sel.value;
+    sel.innerHTML='<option value="">機種（全部）</option>';
+    getModels(all).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+    sel.value=getModels(all).includes(keep)?keep:'';
+    sel.style.display=getModels(all).length>1?'':'none';
+  });
   const clusters=[...new Set(all.map(r=>r._cluster))].sort();
   const owners=[...new Set(all.map(r=>r._owner))].sort();
   ['f-cluster'].forEach(id=>{
@@ -518,7 +687,9 @@ function applyFilters() {
   const fOwner=document.getElementById('f-owner').value;
   const fStatus=document.getElementById('f-status').value||document.getElementById('f-status2').value;
   const fSearch=document.getElementById('search').value.toLowerCase();
+  const fModel=document.getElementById('f-model').value||document.getElementById('f-model2').value;
   filtered=all.filter(r=>{
+    if(fModel&&r._model!==fModel) return false;
     if(fPhase&&r._phase!==fPhase) return false;
     if(fSev&&r['Severity']!==fSev) return false;
     if(fDomain&&r['Issue Domain']!==fDomain) return false;
@@ -535,7 +706,7 @@ function applyFilters() {
   renderTable(filtered);
 }
 function clearFilters() {
-  ['f-phase','f-sev','f-domain','f-cluster','f-owner','f-status','f-phase2','f-sev2','f-status2'].forEach(id=>document.getElementById(id).value='');
+  ['f-model','f-model2','f-phase','f-sev','f-domain','f-cluster','f-owner','f-status','f-phase2','f-sev2','f-status2'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('search').value='';
   applyFilters();
 }
@@ -557,11 +728,13 @@ function renderKPI(data) {
   document.getElementById('k-total-sub').textContent=`SIT: ${data.filter(r=>r._phase==='SIT').length} / SVT: ${data.filter(r=>r._phase==='SVT').length}`;
   document.getElementById('k-total-d').innerHTML=deltaStr(total,prevTot,false);
   document.getElementById('k-bl').textContent=bl;
+  document.getElementById('k-bl-sub').textContent=`阻擋驗測 · 佔 ${pctOf(bl,total)}%`;
   document.getElementById('k-bl-d').innerHTML=deltaStr(bl,prevBl,false);
   document.getElementById('k-cr').textContent=cr;
+  document.getElementById('k-cr-sub').textContent=`功能無法驗證 · 佔 ${pctOf(cr,total)}%`;
   document.getElementById('k-cr-d').innerHTML=deltaStr(cr,prevCr,false);
   document.getElementById('k-mj').textContent=mj;
-  document.getElementById('k-mj-sub').textContent=`New: ${data.filter(r=>r._status==='New').length} / Analyzing: ${data.filter(r=>r._status==='Analyzing').length}`;
+  document.getElementById('k-mj-sub').textContent=`佔 ${pctOf(mj,total)}% · New ${data.filter(r=>r._status==='New').length} / Analyzing ${data.filter(r=>r._status==='Analyzing').length}`;
   document.getElementById('k-mj-d').innerHTML=deltaStr(mj,prevMj,false);
   document.getElementById('k-conv').textContent=pct+'%';
   document.getElementById('k-conv-sub').textContent=`Confirm ${conf}/${total} 筆`;
@@ -662,7 +835,7 @@ function renderTable(data) {
     const sev=r['Severity']||'';const sevC=sev==='Blocker'?'p-bl':sev==='Critical'?'p-cr':'p-mj';
     const st=r._status;const stC=st==='New'?'s-new':st==='Analyzing'?'s-ana':st==='Confirm'?'s-con':'s-cls';
     const domain=String(r['Issue Domain']||'');const domainKey=domain.replace('TPV ','');
-    return `<tr><td class="code">${r['事務編碼']||''}</td>
+    return `<tr><td class="code">${idCell(r)}</td>
       <td><span style="font-size:10px;font-weight:700;color:${r._phase==='SIT'?'#f59e0b':'#34d399'}">${r._phase}</span></td>
       <td><span class="sev-pill ${sevC}">${sev}</span></td>
       <td><span class="domain-tag d-${domainKey}">${domain}</span></td>
@@ -688,11 +861,10 @@ function renderTable(data) {
 // ─── DIFF ENGINE ──────────────────────────────────────────────
 function computeDiff() {
   const curr=getAllCurrent(), base=getAllBaseline();
-  const baseMap=new Map(base.map(r=>[r['事務編碼'],r]));
-  const currMap=new Map(curr.map(r=>[r['事務編碼'],r]));
+  const baseMap=new Map(base.map(r=>[rowKey(r),r]));
   const newIssues=[], resolved=[], changed=[], stale=[];
   curr.forEach(r=>{
-    const id=r['事務編碼'];
+    const id=rowKey(r);
     if(!baseMap.has(id)){newIssues.push(r);return;}
     const prev=baseMap.get(id);
     const prevSt=getStatus(prev['狀態']), currSt=r._status;
@@ -712,6 +884,7 @@ function renderDiff() {
   const {newIssues,resolved,changed,stale,curr,base}=diffResult;
   document.getElementById('diff-empty').style.display='none';
   document.getElementById('diff-body').style.display='';
+  renderFuncUpdate('func-tbody-diff','func-note-diff');
   document.getElementById('diff-subtitle').textContent=`上週：${base.length} 筆  →  本週：${curr.length} 筆  （差異 ${curr.length-base.length>0?'+':''}${curr.length-base.length}）`;
   document.getElementById('d-new').textContent=newIssues.length;
   document.getElementById('d-res').textContent=resolved.length;
@@ -738,7 +911,7 @@ function renderDiff() {
   // tables
   const sevBadge=s=>s==='Blocker'?'<span class="sev-pill p-bl">Blocker</span>':s==='Critical'?'<span class="sev-pill p-cr">Critical</span>':'<span class="sev-pill p-mj">Major</span>';
   document.getElementById('stale-tbody').innerHTML=stale.length?stale.map(({curr:r,prev})=>`<tr>
-    <td class="code">${r['事務編碼']}</td><td>${sevBadge(r['Severity'])}</td>
+    <td class="code">${idCell(r)}</td><td>${sevBadge(r['Severity'])}</td>
     <td><span class="domain-tag d-${String(r['Issue Domain']||'').replace('TPV ','')}">${r['Issue Domain']||''}</span></td>
     <td style="line-height:1.4">${String(r['Subject']||'').substring(0,70)}</td>
     <td><span class="status-tag s-ana">${getStatus(prev['狀態'])}</span></td>
@@ -747,7 +920,7 @@ function renderDiff() {
     :'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted)">無停滯問題 ✓</td></tr>';
 
   document.getElementById('new-tbody').innerHTML=newIssues.length?newIssues.map(r=>`<tr>
-    <td class="code">${r['事務編碼']}</td>
+    <td class="code">${idCell(r)}</td>
     <td><span style="font-size:10px;font-weight:700;color:${r._phase==='SIT'?'#f59e0b':'#34d399'}">${r._phase}</span></td>
     <td>${sevBadge(r['Severity'])}</td>
     <td><span class="domain-tag d-${String(r['Issue Domain']||'').replace('TPV ','')}">${r['Issue Domain']||''}</span></td>
@@ -756,7 +929,7 @@ function renderDiff() {
     :'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--muted)">本週無新增問題 ✓</td></tr>';
 
   document.getElementById('res-tbody').innerHTML=resolved.length?resolved.map(({curr:r,prevSt})=>`<tr>
-    <td class="code">${r['事務編碼']}</td><td>${sevBadge(r['Severity'])}</td>
+    <td class="code">${idCell(r)}</td><td>${sevBadge(r['Severity'])}</td>
     <td><span class="domain-tag d-${String(r['Issue Domain']||'').replace('TPV ','')}">${r['Issue Domain']||''}</span></td>
     <td style="line-height:1.4">${String(r['Subject']||'').substring(0,70)}</td>
     <td><span class="status-tag s-ana">${prevSt}</span></td>
@@ -764,7 +937,7 @@ function renderDiff() {
     :'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--muted)">本週尚無收斂問題</td></tr>';
 
   document.getElementById('chg-tbody').innerHTML=changed.length?changed.map(({curr:r,prevSt})=>`<tr>
-    <td class="code">${r['事務編碼']}</td><td>${sevBadge(r['Severity'])}</td>
+    <td class="code">${idCell(r)}</td><td>${sevBadge(r['Severity'])}</td>
     <td><span class="domain-tag d-${String(r['Issue Domain']||'').replace('TPV ','')}">${r['Issue Domain']||''}</span></td>
     <td style="line-height:1.4">${String(r['Subject']||'').substring(0,60)}</td>
     <td><span class="status-tag s-ana">${prevSt}</span></td>
@@ -773,9 +946,42 @@ function renderDiff() {
     :'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted)">無狀態變動</td></tr>';
 }
 
+// ─── SETTINGS ─────────────────────────────────────────────────
+function openSettings(){ document.getElementById('ur-prefix').value=urPrefix(); document.getElementById('settings-modal').hidden=false; }
+function closeSettings(){ document.getElementById('settings-modal').hidden=true; }
+function saveSettings(){
+  const v=document.getElementById('ur-prefix').value.trim();
+  try { if(v) localStorage.setItem(UR_PREFIX_KEY,v); else localStorage.removeItem(UR_PREFIX_KEY); } catch(e) {}
+  closeSettings(); toast(v?'已儲存 UR 連結前綴':'已清除 UR 連結前綴'); if(getAllCurrent().length) rebuildAll();
+}
+
 // ─── EXPORT EXCEL ─────────────────────────────────────────────
+function funcUpdateSheet() {
+  const hasBase=getAllBaseline().length>0;
+  const rows=[['各功能更新檢查 — Root Cause 填寫與狀態推進'+(hasBase?'(對照上週)':'(未匯入上週基準)')],[],
+    ['機種','功能','本週筆數','未結','RC 已填','RC 填寫率','上週 RC 填寫率','變化','RC 新填','狀態推進','判定']];
+  funcUpdateRows().forEach(r=>rows.push([r.model,r.domain,r.total,r.open,r.rc,r.rcP+'%',r.brcP==null?'':r.brcP+'%',r.brcP==null?'':(r.rcP-r.brcP)+'%',hasBase?r.rcNew:'',hasBase?r.moved:'',r.verdict]));
+  rows.push([],['判定說明:「有更新」= 本週有新填 Root Cause 或狀態有推進;「⚠ 無更新」= 仍有未結問題,但 RC 與狀態都和上週相同。']);
+  const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:22},{wch:10},{wch:9},{wch:7},{wch:8},{wch:10},{wch:13},{wch:8},{wch:8},{wch:9},{wch:12}];
+  return ws;
+}
+function modelCompareSheet() {
+  const cur=getAllCurrent(), base=getAllBaseline(), models=getModels(cur);
+  const cm=models.map(m=>modelMetrics(cur.filter(r=>r._model===m)));
+  const bm=models.map(m=>{const b=base.filter(r=>r._model===m);return b.length?modelMetrics(b):null;});
+  const head=['指標'];models.forEach(m=>{head.push(m+' 本週');if(base.length)head.push(m+' 上週');});
+  const rows=[['機種並排比較'],[],head];
+  MODEL_ROWS.forEach(([label,k,unit])=>{const row=[label];cm.forEach((v,i)=>{row.push(v[k]+(unit||''));if(base.length)row.push(bm[i]?bm[i][k]+(unit||''):'');});rows.push(row);});
+  const ws=XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:20},...head.slice(1).map(()=>({wch:18}))];
+  return ws;
+}
+// 明細表第一欄(ID)加上 UR 超連結
+function linkIdColumn(ws, data) {
+  const p=urPrefix(); if(!p) return;
+  data.forEach((r,i)=>{ if(!r._urId) return; const ref=XLSX.utils.encode_cell({r:i+1,c:0}); if(ws[ref]) ws[ref].l={Target:p+r._urId,Tooltip:'開啟 UR '+r._urId}; });
+}
 function exportExcel() {
-  if(!filtered.length){alert('無資料');return;}
+  if(!filtered.length){toast('無資料');return;}
   const wb=XLSX.utils.book_new(), data=filtered;
   const total=data.length, bl=data.filter(r=>r['Severity']==='Blocker').length;
   const cr=data.filter(r=>r['Severity']==='Critical').length, mj=data.filter(r=>r['Severity']==='Major').length;
@@ -784,31 +990,36 @@ function exportExcel() {
   const s1rows=[[_mname+' — SIT/SVT Problem List 追蹤報告'],['匯出時間：'+new Date().toLocaleString('zh-TW')],[],
     ['【總覽 KPI】'],['項目','本週','說明'],
     ['總問題數',total,`SIT: ${data.filter(r=>r._phase==='SIT').length} / SVT: ${data.filter(r=>r._phase==='SVT').length}`],
-    ['Blocker',bl,'直接阻擋驗測'],['Critical',cr,'功能無法驗證'],['Major',mj,''],['收斂率',pct+'%',`Confirm ${conf} 筆`],[],
+    ['Blocker',bl,'直接阻擋驗測 · 佔 '+pctOf(bl,total)+'%'],['Critical',cr,'功能無法驗證 · 佔 '+pctOf(cr,total)+'%'],['Major',mj,'佔 '+pctOf(mj,total)+'%'],['收斂率',pct+'%',`Confirm ${conf} 筆`],[],
     ['【Severity × Domain】'],['Domain','Blocker','Critical','Major','合計']];
   ['SW','EE','ME','TPV LCM','Power'].forEach(d=>{const sub=data.filter(r=>r['Issue Domain']===d);s1rows.push([d,sub.filter(r=>r['Severity']==='Blocker').length,sub.filter(r=>r['Severity']==='Critical').length,sub.filter(r=>r['Severity']==='Major').length,sub.length]);});
   s1rows.push([],['【Cluster 分析】'],['群組','Owner','總數','BL','CR','Confirm','收斂率']);
   const cd={};data.forEach(r=>{const c=r._cluster;if(!cd[c])cd[c]={total:0,bl:0,cr:0,conf:0};cd[c].total++;if(r['Severity']==='Blocker')cd[c].bl++;if(r['Severity']==='Critical')cd[c].cr++;if(r._status==='Confirm')cd[c].conf++;});
   Object.entries(cd).sort((a,b)=>b[1].total-a[1].total).forEach(([ck,v])=>{const info=OWNER_MAP[ck]||{label:ck,owner:'PM'};s1rows.push([info.label,info.owner,v.total,v.bl,v.cr,v.conf,v.total?Math.round(v.conf/v.total*100)+'%':'0%']);});
   const ws1=XLSX.utils.aoa_to_sheet(s1rows);ws1['!cols']=[{wch:22},{wch:12},{wch:40}];XLSX.utils.book_append_sheet(wb,ws1,'Dashboard摘要');
-  const h=['事務編碼','Phase','Severity','Domain','Cluster','Owner','Module','Subject','狀態','Root Cause','Solution','創建時間'];
-  const ws2=XLSX.utils.aoa_to_sheet([h,...data.map(r=>[r['事務編碼']||'',r._phase,r['Severity']||'',r['Issue Domain']||'',OWNER_MAP[r._cluster]?.label||r._cluster,r._owner||'',r['Module']||'',r['Subject']||'',r['狀態']||'',r['Root Cause']||'',r['Solution']||'',r['創建時間']||''])]);
-  ws2['!cols']=[{wch:22},{wch:6},{wch:10},{wch:10},{wch:26},{wch:16},{wch:22},{wch:50},{wch:14},{wch:40},{wch:40},{wch:18}];XLSX.utils.book_append_sheet(wb,ws2,'問題明細');
+  const h=['事務編碼','機種','Phase','Severity','Domain','Cluster','Owner','Module','Subject','狀態','Root Cause','Solution','創建時間'];
+  const ws2=XLSX.utils.aoa_to_sheet([h,...data.map(r=>[r['事務編碼']||r._urId||'',r._model,r._phase,r['Severity']||'',r['Issue Domain']||'',OWNER_MAP[r._cluster]?.label||r._cluster,r._owner||'',r['Module']||'',r['Subject']||'',r['狀態']||'',r['Root Cause']||'',r['Solution']||'',r['創建時間']||''])]);
+  linkIdColumn(ws2,data);
+  ws2['!cols']=[{wch:22},{wch:18},{wch:6},{wch:10},{wch:10},{wch:26},{wch:16},{wch:22},{wch:50},{wch:14},{wch:40},{wch:40},{wch:18}];XLSX.utils.book_append_sheet(wb,ws2,'問題明細');
+  XLSX.utils.book_append_sheet(wb,funcUpdateSheet(),'各功能更新檢查');
+  if(getModels(getAllCurrent()).length>1) XLSX.utils.book_append_sheet(wb,modelCompareSheet(),'機種並排');
   const bch=['事務編碼','Phase','Severity','Domain','Cluster','Owner','Subject','狀態','Root Cause','Solution'];
   const ws3=XLSX.utils.aoa_to_sheet([bch,...data.filter(r=>['Blocker','Critical'].includes(r['Severity'])).map(r=>[r['事務編碼']||'',r._phase,r['Severity']||'',r['Issue Domain']||'',OWNER_MAP[r._cluster]?.label||r._cluster,r._owner||'',r['Subject']||'',r['狀態']||'',r['Root Cause']||'',r['Solution']||''])]);
   ws3['!cols']=[{wch:22},{wch:6},{wch:10},{wch:10},{wch:26},{wch:16},{wch:50},{wch:14},{wch:40},{wch:40}];XLSX.utils.book_append_sheet(wb,ws3,'Blocker+Critical專項');
-  const _fname = (getAllCurrent().map(r=>r['External Model Name']).find(v=>v&&String(v).trim())||'ProblemList').replace(/[^a-zA-Z0-9_\-]/g,'_');
+  const _ms = getModels(getAllCurrent()); const _fname = (_ms.length>1?'MultiModel':(_ms[0]||'ProblemList')).replace(/[^a-zA-Z0-9_\-]/g,'_');
   XLSX.writeFile(wb, _fname+'_問題追蹤_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx');
 }
 
 function exportDiffExcel() {
-  if(!diffResult){alert('請先載入比較基準');return;}
+  if(!diffResult){toast('請先載入比較基準');return;}
   const {newIssues,resolved,changed,stale,curr,base}=diffResult;
   const wb=XLSX.utils.book_new();
   const _mn2 = getAllCurrent().map(r=>r['External Model Name']).find(v=>v&&String(v).trim()) || 'Problem List';
   const s0=[[_mn2+' — 週差異報告'],['產出時間：'+new Date().toLocaleString('zh-TW')],['上週筆數：'+base.length+'  本週筆數：'+curr.length],[],
     ['指標','數量'],['🆕 新增問題',newIssues.length],['✅ 已收斂',resolved.length],['🔄 狀態變動',changed.length],['❌ 連續停滯',stale.length]];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s0),'差異摘要');
+  XLSX.utils.book_append_sheet(wb,funcUpdateSheet(),'各功能更新檢查');
+  if(getModels(curr).length>1) XLSX.utils.book_append_sheet(wb,modelCompareSheet(),'機種並排');
   const stH=['事務編碼','Severity','Domain','Subject','上週狀態','本週狀態','Owner'];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([stH,...stale.map(({curr:r,prev})=>[r['事務編碼'],r['Severity'],r['Issue Domain'],r['Subject'],getStatus(prev['狀態']),r._status,r._owner])]),'連續停滯');
   const nH=['事務編碼','Phase','Severity','Domain','Subject','Owner'];
@@ -817,7 +1028,7 @@ function exportDiffExcel() {
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([rH,...resolved.map(({curr:r,prevSt})=>[r['事務編碼'],r['Severity'],r['Issue Domain'],r['Subject'],prevSt,r._status])]),'本週收斂');
   const cH=['事務編碼','Severity','Domain','Subject','上週狀態','本週狀態','Owner'];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([cH,...changed.map(({curr:r,prevSt})=>[r['事務編碼'],r['Severity'],r['Issue Domain'],r['Subject'],prevSt,r._status,r._owner])]),'狀態變動');
-  const _fn2 = (getAllCurrent().map(r=>r['External Model Name']).find(v=>v&&String(v).trim())||'ProblemList').replace(/[^a-zA-Z0-9_\-]/g,'_');
+  const _ms2 = getModels(getAllCurrent()); const _fn2 = (_ms2.length>1?'MultiModel':(_ms2[0]||'ProblemList')).replace(/[^a-zA-Z0-9_\-]/g,'_');
   XLSX.writeFile(wb, _fn2+'_週差異報告_'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'.xlsx');
 }
 </script>
