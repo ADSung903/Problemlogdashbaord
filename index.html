@@ -611,7 +611,7 @@ function renderModelCompare() {
   document.getElementById('model-tbody').innerHTML=MODEL_ROWS.map(([label,k,unit])=>'<tr><td>'+label+'</td>'+cm.map((v,i)=>{
     const prev=bm[i]?bm[i][k]:null, d=prev==null?null:v[k]-prev;
     const good=['convP','rcP'].includes(k)?d>0:d<0;
-    const dTxt=d==null||d===0?'':` <span class="delta ${good?'up':'dn'}" style="display:inline">${d>0?'+':''}${d}${unit||''}</span>`;
+    const dTxt=d==null||d===0?'':` <span class="delta ${good?'dn':'up'}" style="display:inline">${d>0?'+':''}${d}${unit||''}</span>`;
     return `<td style="font-weight:600">${v[k]}${unit||''}${dTxt}</td>`;
   }).join('')+'</tr>').join('');
 }
@@ -648,7 +648,7 @@ function renderFuncUpdate(tbodyId,noteId) {
       <td>${r.total}</td><td>${r.open}</td>
       <td><div class="bar-cell"><div class="mini-bar"><div class="mini-fill" style="width:${r.rcP}%;background:var(--accent)"></div></div><div class="mini-pct">${r.rcP}%</div></div></td>
       <td>${r.brcP==null?'—':r.brcP+'%'}</td>
-      <td>${dP===''?'—':`<span class="delta ${dP>0?'up':dP<0?'dn':'same'}" style="display:inline">${dP>0?'+':''}${dP}%</span>`}</td>
+      <td>${dP===''?'—':`<span class="delta ${dP>0?'dn':dP<0?'up':'same'}" style="display:inline">${dP>0?'+':''}${dP}%</span>`}</td>
       <td>${hasBase?r.rcNew:'—'}</td><td>${hasBase?r.moved:'—'}</td><td style="${vC}">${r.verdict}</td></tr>`;
   }).join(''):'<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--muted)">無資料</td></tr>';
   const note=document.getElementById(noteId);
