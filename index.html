@@ -383,7 +383,7 @@ canvas{max-height:200px}
     <input id="ur-prefix" placeholder="例:https://<內部系統>/ViewProblem.aspx?Problem=">
     <div class="func-note">UR 編號取自匯出檔的「#」欄(7 位數);沒有「#」欄時,若事務編碼是純數字就用它。</div>
     <label for="sev-map" style="margin-top:14px;display:block">兼容報告 Severity 對照(LADM / NB / Legion Space / 台式兼容的 High/Medium/Low 要算成哪一級)</label>
-    <input id="sev-map" placeholder="High=Critical, Medium=Major, Low=Major">
+    <input id="sev-map" placeholder="High=Blocker, Medium=Major, Low=Major">
     <div class="modal-actions"><button onclick="closeSettings()">取消</button><button class="primary" onclick="saveSettings()">儲存</button></div>
   </div>
 </div>
@@ -565,7 +565,7 @@ function excelDate(v) {
   return v==null?'':String(v);
 }
 // 兼容報告的 High/Medium/Low 對到 UR 的 Blocker/Critical/Major,可在 ⚙ 設定改
-const SEV_MAP_KEY='pld_sev_map', SEV_MAP_DEFAULT='High=Critical, Medium=Major, Low=Major';
+const SEV_MAP_KEY='pld_sev_map', SEV_MAP_DEFAULT='High=Blocker, Medium=Major, Low=Major';
 function sevMapText() { try { return localStorage.getItem(SEV_MAP_KEY)||SEV_MAP_DEFAULT; } catch(e) { return SEV_MAP_DEFAULT; } }
 function mapSev(v) {
   const s=String(v||'').trim(), m={};
